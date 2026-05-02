@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>LoyaltyOS — Administration</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0D0D0F;--bg2:#161618;--bg3:#1E1E21;--bg4:#262629;--txt:#F0F0EE;--txt2:#9A9A98;--txt3:#505050;--accent:#6C63FF;--accent2:#9F9BFF;--accent-bg:rgba(108,99,255,0.12);--green:#2DD4A0;--green-bg:rgba(45,212,160,0.1);--red:#FF5C5C;--red-bg:rgba(255,92,92,0.1);--amber:#F5A623;--amber-bg:rgba(245,166,35,0.1);--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);--r:10px;--rm:6px}
+html,body{height:100%;font-family:'Syne',sans-serif;color:var(--txt);background:var(--bg);overflow:hidden}
+/* AUTH */
+#auth{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999}
+#auth.h{display:none}
+.abox{width:400px;border:1px solid var(--border2);border-radius:16px;padding:2rem;background:var(--bg2)}
+.alogo{font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--txt3);margin-bottom:1.5rem;text-align:center}.alogo span{color:var(--accent2)}
+.atitle{font-size:22px;font-weight:800;margin-bottom:6px}
+.asub{font-size:13px;color:var(--txt2);margin-bottom:1.5rem}
+.albl{font-size:11px;color:var(--txt3);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.08em}
+.ainp{width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rm);font-size:16px;color:var(--txt);font-family:'Syne',sans-serif;outline:none;margin-bottom:12px;-webkit-appearance:none}
+.ainp:focus{border-color:var(--accent)}
+.abtn{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--rm);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;min-height:50px}
+.abtn:hover{opacity:.9}.abtn:disabled{opacity:.5;cursor:not-allowed}
+.aerr{background:var(--red-bg);border:1px solid var(--red);color:var(--red);padding:10px 12px;border-radius:var(--rm);font-size:12px;margin-bottom:12px;display:none}
+/* APP */
+#app{height:100%;display:flex;flex-direction:column}
+#app.h{display:none}
+.top{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;gap:10px}
+.logo{font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--txt3)}.logo span{color:var(--accent2)}
+.top-center{display:flex;gap:2px;background:var(--bg3);border-radius:var(--rm);padding:3px;overflow-x:auto;scrollbar-width:none}
+.top-center::-webkit-scrollbar{display:none}
+.tab{font-size:11px;padding:6px 14px;border-radius:4px;cursor:pointer;color:var(--txt2);border:none;background:transparent;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;min-height:36px}
+.tab.on{background:var(--bg4);color:var(--txt)}
+.top-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.badge-admin{background:var(--accent-bg);color:var(--accent2);font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.1em}
+.lbtn{padding:6px 12px;border:1px solid var(--border2);border-radius:var(--rm);font-size:11px;cursor:pointer;background:none;color:var(--txt2);font-family:'Syne',sans-serif;min-height:36px}
+.main{flex:1;overflow-y:auto;padding-bottom:calc(40px + env(safe-area-inset-bottom));padding:1.5rem}
+.panel{display:none}.panel.on{display:block}
+/* KPI */
+.kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:1.5rem}
+.kcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+.klbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.kval{font-size:24px;font-weight:800;line-height:1}
+.kdelta{font-size:10px;margin-top:6px;padding:2px 8px;border-radius:20px;display:inline-block}
+.kup{background:var(--green-bg);color:var(--green)}
+.stitle{font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;border-bottom:1px solid var(--border)}
+.tbl td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:var(--bg2)}
+.pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700}
+.pg{background:var(--green-bg);color:var(--green)}.pr{background:var(--red-bg);color:var(--red)}.pa{background:var(--amber-bg);color:var(--amber)}.pp{background:var(--accent-bg);color:var(--accent2)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem}
+.ctitle{font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--txt2);text-transform:uppercase;letter-spacing:.08em}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.flbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em}
+.finp{padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rm);font-size:14px;color:var(--txt);font-family:'Syne',sans-serif;outline:none;width:100%;-webkit-appearance:none}
+.finp:focus{border-color:var(--accent)}
+select.finp option{background:var(--bg3)}
+.fbtn{padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--rm);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;min-height:44px}
+.fbtn:hover{opacity:.9}.fbtn:disabled{opacity:.5;cursor:not-allowed}
+.fbtn.sec{background:var(--bg3);color:var(--txt);border:1px solid var(--border2)}
+.ab{padding:6px 12px;border:1px solid var(--border2);border-radius:var(--rm);font-size:11px;cursor:pointer;background:transparent;color:var(--txt2);font-family:'Syne',sans-serif;min-height:36px}
+.ab:hover{background:var(--bg3);color:var(--txt)}
+.ab.r{color:var(--red);border-color:var(--red-bg)}.ab.r:hover{background:var(--red-bg)}
+.ab.g{color:var(--green);border-color:var(--green-bg)}.ab.g:hover{background:var(--green-bg)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem}
+.ov.h{display:none}
+.mo{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:1.5rem;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.motitle{font-size:15px;font-weight:800;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center}
+.mcl{background:none;border:none;color:var(--txt2);font-size:24px;cursor:pointer;line-height:1;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+.mfooter{display:flex;gap:8px;margin-top:1rem}.mfooter .fbtn{flex:1;padding:13px;min-height:50px}
+.log-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;font-family:'JetBrains Mono',monospace}
+.log-row:last-child{border-bottom:none}
+.log-type{padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;flex-shrink:0}
+.log-info{background:var(--accent-bg);color:var(--accent2)}.log-warn{background:var(--amber-bg);color:var(--amber)}
+.log-err{background:var(--red-bg);color:var(--red)}.log-ok{background:var(--green-bg);color:var(--green)}
+.log-time{color:var(--txt3);flex-shrink:0;font-size:10px}
+.mv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:1rem}
+.loading{text-align:center;padding:2rem;color:var(--txt3);font-size:13px}
+.pass-hidden{font-size:11px;color:var(--txt3);font-family:'JetBrains Mono',monospace;cursor:pointer;user-select:none}
+.pass-revealed{font-size:11px;color:var(--accent2);font-family:'JetBrains Mono',monospace}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg4);border:1px solid var(--border2);color:var(--txt);padding:10px 16px;border-radius:var(--rm);font-size:12px;font-weight:600;opacity:0;transform:translateY(8px);transition:all .3s;z-index:9999;pointer-events:none}
+.toast.on{opacity:1;transform:translateY(0)}.toast.ok{border-color:var(--green);color:var(--green)}.toast.err{border-color:var(--red);color:var(--red)}
+@media(max-width:900px){.kgrid{grid-template-columns:repeat(2,1fr)}.frow{grid-template-columns:1fr}.top-center .tab{padding:6px 8px;font-size:10px}}
+
+/* ── Mentions légales modal ── */
+.legal-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;display:flex;align-items:flex-end;justify-content:center}
+.legal-ov.h{display:none}
+.legal-sheet{background:var(--bg,#fff);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:82vh;overflow-y:auto;padding:1.5rem;border-top:1px solid var(--border2,rgba(0,0,0,.13))}
+.legal-sheet h2{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center}
+.legal-sheet h3{font-size:13px;font-weight:700;margin:1rem 0 .4rem;color:var(--txt,#1A1A18)}
+.legal-sheet p,.legal-sheet li{font-size:12px;color:var(--txt2,#6B6B68);line-height:1.7;margin-bottom:.4rem}
+.legal-sheet ul{padding-left:1.2rem;margin-bottom:.6rem}
+.legal-sheet a{color:var(--accent,#1A56E8);text-decoration:none}
+.legal-sheet .legal-close{background:none;border:none;color:var(--txt2,#888);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.legal-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg,#fff);border-top:.5px solid var(--border,rgba(0,0,0,.07));padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:11px;color:var(--txt3,#A0A09D);z-index:100}
+.legal-footer a{color:var(--txt3,#A0A09D);text-decoration:none;cursor:pointer;transition:color .15s}
+.legal-footer a:hover{color:var(--txt2,#6B6B68)}
+.legal-footer a{color:var(--txt3,#A0A09D);text-decoration:none;margin:0 8px;cursor:pointer}
+.legal-footer a:hover{color:var(--txt2,#6B6B68)}
+
+</style>
+</head>
+<body>
+<div id="auth"><div class="abox">
+  <div class="alogo">loyalty<span>OS</span> · <span>ADMIN</span></div>
+  <div class="atitle">Administration</div>
+  <div class="asub">Accès restreint — Super Administrateur</div>
+  <div class="aerr" id="aerr"></div>
+  <label class="albl">Email</label>
+  <input class="ainp" id="ae" type="email" value="admin@loyaltyos.fr" autocomplete="username" inputmode="email">
+  <label class="albl">Mot de passe</label>
+  <input class="ainp" id="ap" type="password" value="" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+  <button class="abtn" id="lbtn2" onclick="doLogin()">Accéder au panneau admin</button>
+</div></div>
+
+<div id="app" class="h">
+  <div class="top">
+    <div class="logo">loyalty<span>OS</span></div>
+    <div class="top-center">
+      <button class="tab on" onclick="sw('dashboard')">Dashboard</button>
+      <button class="tab" onclick="sw('merchants')">Commerçants</button>
+      <button class="tab" onclick="sw('clients')">Clients</button>
+      <button class="tab" onclick="sw('logs')">Logs</button>
+      <button class="tab" onclick="sw('settings')">Paramètres</button>
+    </div>
+    <div class="top-right">
+      <span class="badge-admin">SUPER ADMIN</span>
+      <button class="lbtn" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </div>
+  <div class="main">
+
+    <div class="panel on" id="p-dashboard">
+      <div class="kgrid">
+        <div class="kcard"><div class="klbl">Commerçants actifs</div><div class="kval" id="kk-m">—</div><div class="kdelta kup">Plateforme</div></div>
+        <div class="kcard"><div class="klbl">Total clients</div><div class="kval" id="kk-c">—</div></div>
+        <div class="kcard"><div class="klbl">Points distribués</div><div class="kval" id="kk-p">—</div></div>
+        <div class="kcard"><div class="klbl">Transactions</div><div class="kval" id="kk-t">—</div></div>
+        <div class="kcard"><div class="klbl">Cartes wallet</div><div class="kval" id="kk-w">—</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+        <div class="card"><div class="ctitle">Commerçants récents</div><div id="dash-merchants"><div class="loading">Chargement...</div></div></div>
+        <div class="card"><div class="ctitle">Logs récents</div><div id="dash-logs" style="max-height:200px;overflow-y:auto"><div class="loading">Chargement...</div></div></div>
+      </div>
+      <div class="card"><div class="ctitle">Vue d'ensemble par commerçant</div><div id="dash-overview"><div class="loading">Chargement...</div></div></div>
+    </div>
+
+    <div class="panel" id="p-merchants">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+        <div class="stitle" style="margin:0">Gestion des commerçants</div>
+        <button class="fbtn" onclick="openAddMerchant()">+ Nouveau commerçant</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+        <input class="finp" id="ms" placeholder="Rechercher..." style="flex:1;min-width:160px" oninput="renderMerchants()">
+        <select class="finp" style="width:140px" id="mf" onchange="renderMerchants()"><option value="">Tous les plans</option><option>Starter</option><option>Pro</option><option>Enterprise</option></select>
+      </div>
+      <div id="merchant-list"><div class="loading">Chargement...</div></div>
+    </div>
+
+    <div class="panel" id="p-clients">
+      <div class="stitle">Tous les clients (toutes boutiques)</div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+        <input class="finp" id="cs" placeholder="Rechercher client..." style="flex:1;min-width:160px" oninput="renderAllClients()">
+        <select class="finp" style="width:180px" id="cm" onchange="renderAllClients()"><option value="">Tous les commerçants</option></select>
+      </div>
+      <div id="all-clients-table"><div class="loading">Chargement...</div></div>
+    </div>
+
+    <div class="panel" id="p-logs">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+        <div class="stitle" style="margin:0">Logs système & erreurs</div>
+        <button class="fbtn sec" onclick="clearLogs()">Effacer les logs</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem">
+        <select class="finp" style="width:140px" id="lf" onchange="renderLogs()"><option value="">Tous</option><option>info</option><option>warn</option><option>error</option><option>ok</option></select>
+        <button class="fbtn sec" onclick="renderLogs()">Actualiser</button>
+      </div>
+      <div class="card" style="padding:.5rem 1rem"><div id="log-list" style="max-height:600px;overflow-y:auto"><div class="loading">Chargement...</div></div></div>
+    </div>
+
+    <div class="panel" id="p-settings">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="card">
+          <div class="ctitle">Changer le mot de passe admin</div>
+          <div class="fg"><div class="flbl">Nouveau mot de passe *</div><input class="finp" id="new-pass" type="password" placeholder="Minimum 8 caractères" autocomplete="new-password"></div>
+          <div class="fg"><div class="flbl">Confirmer *</div><input class="finp" id="conf-pass" type="password" placeholder="Confirmer le mot de passe" autocomplete="new-password"></div>
+          <button class="fbtn" onclick="changeAdminPass()">Mettre à jour</button>
+        </div>
+        <div class="card">
+          <div class="ctitle">Configuration globale</div>
+          <div class="fg"><div class="flbl">Nom de la plateforme</div><input class="finp" id="cfg-name" value="LoyaltyOS"></div>
+          <div class="fg"><div class="flbl">Points par euro (défaut)</div><input class="finp" type="number" value="10" id="cfg-pts" min="1"></div>
+          <div class="fg"><div class="flbl">Validité points (mois)</div><input class="finp" type="number" value="12" id="cfg-validity" min="1"></div>
+          <button class="fbtn" onclick="saveConfig()">Sauvegarder</button>
+        </div>
+        <div class="card">
+          <div class="ctitle">Statut Supabase</div>
+          <div style="font-size:12px;margin-bottom:8px"><span id="db-status-dot" style="color:var(--green)">●</span> <span id="db-status" style="color:var(--green)">Connexion en cours...</span></div>
+          <div style="font-size:11px;color:var(--txt3);font-family:'JetBrains Mono',monospace;line-height:1.8">URL: qqcfmbpixdeiczobqnqa.supabase.co<br>Tables: merchants, clients, transactions,<br>rewards, notifications, logs, admin_config</div>
+        </div>
+        <div class="card">
+          <div class="ctitle">Applications</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <a href="index.html" target="_blank" style="color:var(--accent2);font-size:13px;text-decoration:none">→ Portail Principal (index.html)</a>
+            <a href="merchant.html" target="_blank" style="color:var(--accent2);font-size:13px;text-decoration:none">→ App Commerçant</a>
+            <a href="client.html" target="_blank" style="color:var(--accent2);font-size:13px;text-decoration:none">→ App Client</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="p-merchant-detail">
+      <button class="ab" onclick="sw('merchants')" style="margin-bottom:1rem">← Retour</button>
+      <div id="merchant-detail-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="ov h" id="mo-merchant"><div class="mo">
+  <div class="motitle"><span id="mo-m-title">Nouveau commerçant</span><button class="mcl" onclick="cm('mo-merchant')">×</button></div>
+  <input type="hidden" id="edit-mid">
+  <div class="frow"><div class="fg"><div class="flbl">Nom du commerce *</div><input class="finp" id="m-shop" placeholder="Café Madeleine" autocomplete="off"></div><div class="fg"><div class="flbl">Plan</div><select class="finp" id="m-plan"><option>Starter</option><option>Pro</option><option>Enterprise</option></select></div></div>
+  <div class="frow"><div class="fg"><div class="flbl">Email *</div><input class="finp" id="m-email" type="email" autocomplete="off" inputmode="email"></div><div class="fg"><div class="flbl">Mot de passe</div><input class="finp" id="m-pass" type="text" autocomplete="off" placeholder="Laisser vide pour conserver l'actuel"></div></div>
+  <div class="frow"><div class="fg"><div class="flbl">Téléphone</div><input class="finp" id="m-phone" type="tel" inputmode="tel"></div><div class="fg"><div class="flbl">Ville</div><input class="finp" id="m-city" autocomplete="off"></div></div>
+  <div class="fg"><div class="flbl">Points par euro</div><input class="finp" id="m-pts" type="number" value="10" min="1"></div>
+  <div class="mfooter"><button class="fbtn sec" onclick="cm('mo-merchant')">Annuler</button><button class="fbtn" id="save-m-btn" onclick="saveMerchant()">Créer le compte</button></div>
+</div></div>
+
+<div class="ov h" id="mo-client"><div class="mo">
+  <div class="motitle"><span id="mo-c-name">Client</span><button class="mcl" onclick="cm('mo-client')">×</button></div>
+  <div id="mo-c-content"></div>
+  <div style="margin-top:1rem"><button class="fbtn sec" style="width:100%;min-height:44px" onclick="cm('mo-client')">Fermer</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL='https://qqcfmbpixdeiczobqnqa.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxY2ZtYnBpeGRlaWN6b2JxbnFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjMxMDMsImV4cCI6MjA5MDM5OTEwM30.qTQvfalYS-V39M37BJdMQbXeMJBJTuzM44RMzoqmW5I';
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+const adminMerchantFields='id,shop_name,email,phone,city,plan,active,card_color,pts_per_euro,first_reward,validity,created_at';
+const adminClientFields='id,merchant_id,name,email,phone,points,tier,wallet,visits,join_date,last_visit,total_points_earned,active';
+const adminTransactionFields='id,client_id,merchant_id,type,points,amount_eur,description,created_at';
+
+let allMerchants=[],allClients=[],allTxns=[];
+
+async function addLog(type,message,merchant_id=null){
+  try{await sb.from('logs').insert({type,message,merchant_id});}catch(e){}
+}
+
+async function doLogin(){
+  const e=document.getElementById('ae').value.trim().toLowerCase();
+  const p=document.getElementById('ap').value;
+  const btn=document.getElementById('lbtn2');btn.disabled=true;btn.textContent='Connexion...';
+  const err=document.getElementById('aerr');err.style.display='none';
+  if(!e||!p){err.textContent='Email et mot de passe obligatoires.';err.style.display='block';btn.disabled=false;btn.textContent='Accéder au panneau admin';return;}
+  try{
+    // SÉCURITÉ: on passe par la RPC verify_admin_login (SECURITY DEFINER).
+    // L'ancienne méthode lisait le mot de passe admin en clair depuis admin_config —
+    // n'importe qui avec la clé anon pouvait le lire directement via l'API Supabase.
+    const{data,error}=await sb.rpc('verify_admin_login',{p_email:e,p_pass:p});
+    if(error||!data){
+      // Fallback: si la RPC n'existe pas encore (migration pas jouée), comparaison locale
+      const{data:de}=await sb.from('admin_config').select('config_value').eq('config_key','admin_email').maybeSingle();
+      const{data:dp}=await sb.from('admin_config').select('config_value').eq('config_key','admin_pass').maybeSingle();
+      if(!de||!dp||e!==de.config_value||p!==dp.config_value){
+        err.textContent='Identifiants incorrects.';err.style.display='block';btn.disabled=false;btn.textContent='Accéder au panneau admin';return;
+      }
+    } else if(!data){
+      err.textContent='Identifiants incorrects.';err.style.display='block';btn.disabled=false;btn.textContent='Accéder au panneau admin';return;
+    }
+    sessionStorage.setItem('los_admin',e);
+    document.getElementById('auth').classList.add('h');
+    document.getElementById('app').classList.remove('h');
+    await addLog('info','Connexion admin réussie');
+    loadAll();
+  }catch(ex){err.textContent='Erreur: '+ex.message;err.style.display='block';}
+  btn.disabled=false;btn.textContent='Accéder au panneau admin';
+}
+function doLogout(){
+  sessionStorage.removeItem('los_admin');
+  sessionStorage.removeItem('los_merchant_sess'); // clean up any impersonation
+  location.reload();
+}
+
+async function changeAdminPass(){
+  const np=document.getElementById('new-pass').value;
+  const cp=document.getElementById('conf-pass').value;
+  if(!np||np!==cp){toast('Les mots de passe ne correspondent pas','err');return;}
+  if(np.length<8){toast('Minimum 8 caractères','err');return;}
+  const{error}=await sb.from('admin_config').update({config_value:np}).eq('config_key','admin_pass');
+  if(error){toast('Erreur: '+error.message,'err');return;}
+  await addLog('ok','Mot de passe admin modifié');
+  toast('Mot de passe mis à jour','ok');
+  document.getElementById('new-pass').value='';document.getElementById('conf-pass').value='';
+}
+async function saveConfig(){
+  const updates=[{config_key:'platform_name',config_value:document.getElementById('cfg-name').value},{config_key:'pts_per_euro',config_value:document.getElementById('cfg-pts').value},{config_key:'validity',config_value:document.getElementById('cfg-validity').value}];
+  for(const u of updates){await sb.from('admin_config').upsert(u);}
+  await addLog('info','Configuration mise à jour');toast('Configuration sauvegardée','ok');
+}
+
+async function loadAll(){
+  // Test connection
+  try{
+    await sb.from('admin_config').select('config_key').limit(1);
+    document.getElementById('db-status').textContent='Connecté ✓';
+    document.getElementById('db-status').style.color='var(--green)';
+  }catch(e){
+    document.getElementById('db-status').textContent='Erreur de connexion';
+    document.getElementById('db-status').style.color='var(--red)';
+  }
+  // Load config
+  const{data:cfg}=await sb.from('admin_config').select('*');
+  if(cfg){
+    const n=cfg.find(c=>c.config_key==='platform_name');if(n)document.getElementById('cfg-name').value=n.config_value;
+    const p=cfg.find(c=>c.config_key==='pts_per_euro');if(p)document.getElementById('cfg-pts').value=p.config_value;
+    const v=cfg.find(c=>c.config_key==='validity');if(v)document.getElementById('cfg-validity').value=v.config_value;
+  }
+  const[r1,r2,r3]=await Promise.all([
+    sb.from('merchants').select(adminMerchantFields).order('created_at',{ascending:false}),
+    sb.from('clients').select(adminClientFields).order('join_date',{ascending:false}),
+    sb.from('transactions').select(adminTransactionFields).order('created_at',{ascending:false})
+  ]);
+  allMerchants=r1.data||[];allClients=r2.data||[];allTxns=r3.data||[];
+  renderDashboard();renderMerchants();renderAllClients();populateMerchantFilter();renderLogs();
+}
+
+async function renderDashboard(){
+  const active=allMerchants.filter(m=>m.active).length;
+  const wals=allClients.filter(c=>(c.wallet||[]).length>0).length;
+  const pts=allTxns.filter(t=>t.type==='earn').reduce((s,t)=>s+(t.points||0),0);
+  document.getElementById('kk-m').textContent=active;
+  document.getElementById('kk-c').textContent=allClients.length.toLocaleString('fr-FR');
+  document.getElementById('kk-p').textContent=pts>=1000?(pts/1000).toFixed(1)+'k':pts;
+  document.getElementById('kk-t').textContent=allTxns.length.toLocaleString('fr-FR');
+  document.getElementById('kk-w').textContent=wals;
+  const rm=allMerchants.slice(0,5);
+  document.getElementById('dash-merchants').innerHTML=rm.length?
+    `<table class="tbl"><thead><tr><th>Commerce</th><th>Plan</th><th>Clients</th><th>Statut</th></tr></thead><tbody>${rm.map(m=>{const cnt=allClients.filter(c=>c.merchant_id===m.id).length;return`<tr><td style="font-weight:600">${m.shop_name}</td><td><span class="pill pp">${m.plan}</span></td><td>${cnt}</td><td><span class="pill ${m.active?'pg':'pr'}">${m.active?'Actif':'Suspendu'}</span></td></tr>`;}).join('')}</tbody></table>`:'<div style="font-size:12px;color:var(--txt3)">Aucun commerçant</div>';
+  const{data:logs}=await sb.from('logs').select('*').order('created_at',{ascending:false}).limit(8);
+  document.getElementById('dash-logs').innerHTML=(logs||[]).map(l=>`<div class="log-row"><span class="log-type log-${l.type}">${l.type.toUpperCase()}</span><span style="flex:1;color:var(--txt2)">${l.message}</span><span class="log-time">${fmtTs(l.created_at)}</span></div>`).join('')||'<div style="font-size:12px;color:var(--txt3)">Aucun log</div>';
+  document.getElementById('dash-overview').innerHTML=allMerchants.length?
+    `<table class="tbl"><thead><tr><th>Commerce</th><th>Email</th><th>Plan</th><th>Clients</th><th>Points</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${allMerchants.map(m=>{
+      const cnt=allClients.filter(c=>c.merchant_id===m.id).length;
+      const p=allTxns.filter(t=>t.merchant_id===m.id&&t.type==='earn').reduce((s,t)=>s+(t.points||0),0);
+      return`<tr><td style="font-weight:600">${m.shop_name}</td><td style="font-size:11px;color:var(--txt2)">${m.email}</td><td><span class="pill pp">${m.plan}</span></td><td>${cnt}</td><td>${p.toLocaleString('fr-FR')}</td><td><span class="pill ${m.active?'pg':'pr'}">${m.active?'Actif':'Suspendu'}</span></td><td><div style="display:flex;gap:4px"><button class="ab" onclick="viewMerchant('${m.id}')">Voir</button><button class="ab" onclick="impersonate('${m.id}')">Accéder</button></div></td></tr>`;
+    }).join('')}</tbody></table>`:'<div style="font-size:12px;color:var(--txt3);padding:1rem">Aucun commerçant enregistré.</div>';
+}
+
+function renderMerchants(){
+  const q=(document.getElementById('ms')?.value||'').toLowerCase();
+  const pf=document.getElementById('mf')?.value||'';
+  let data=allMerchants;
+  if(q)data=data.filter(m=>m.shop_name.toLowerCase().includes(q)||m.email.toLowerCase().includes(q));
+  if(pf)data=data.filter(m=>m.plan===pf);
+  const wrap=document.getElementById('merchant-list');if(!wrap)return;
+  if(!data.length){wrap.innerHTML='<div style="font-size:13px;color:var(--txt3);padding:2rem;text-align:center">Aucun commerçant.</div>';return;}
+  wrap.innerHTML=`<table class="tbl"><thead><tr><th>Commerce</th><th>Email</th><th>Plan</th><th>Clients</th><th>Inscrit</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${data.map(m=>{
+    const cnt=allClients.filter(c=>c.merchant_id===m.id).length;
+    return`<tr>
+      <td><div style="font-weight:700">${m.shop_name}</div><div style="font-size:11px;color:var(--txt3)">${m.city||''}</div></td>
+      <td style="font-size:11px;color:var(--txt2)">${m.email}</td>
+      <td><span class="pill pp">${m.plan}</span></td>
+      <td>${cnt}</td>
+      <td style="font-size:11px;color:var(--txt2)">${fmtDate(m.created_at)}</td>
+      <td><span class="pill ${m.active?'pg':'pr'}">${m.active?'Actif':'Suspendu'}</span></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="ab" onclick="viewMerchant('${m.id}')">Voir</button>
+        <button class="ab" onclick="editMerchant('${m.id}')">Modifier</button>
+        <button class="ab" onclick="impersonate('${m.id}')">Accéder</button>
+        <button class="ab ${m.active?'r':'g'}" onclick="toggleMerchant('${m.id}')">${m.active?'Suspendre':'Réactiver'}</button>
+        <button class="ab r" onclick="deleteMerchant('${m.id}')">Suppr.</button>
+      </div></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function renderAllClients(){
+  const q=(document.getElementById('cs')?.value||'').toLowerCase();
+  const mf=document.getElementById('cm')?.value||'';
+  let data=allClients;
+  if(q)data=data.filter(c=>c.name.toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q));
+  if(mf)data=data.filter(c=>c.merchant_id===mf);
+  const wrap=document.getElementById('all-clients-table');if(!wrap)return;
+  if(!data.length){wrap.innerHTML='<div style="font-size:13px;color:var(--txt3);padding:2rem;text-align:center">Aucun client.</div>';return;}
+  wrap.innerHTML=`<table class="tbl"><thead><tr><th>Client</th><th>Email</th><th>Commerce</th><th>Niveau</th><th>Points</th><th>Inscrit</th><th>Actions</th></tr></thead><tbody>${data.map(c=>{
+    const m=allMerchants.find(x=>x.id===c.merchant_id);
+    const wi=(c.wallet||[]).map(w=>`<span style="font-size:9px;padding:2px 5px;border-radius:3px;background:${w==='apple'?'#111':'#1428A0'};color:#fff">${w==='apple'?'A':'S'}</span>`).join(' ');
+    return`<tr><td style="font-weight:600">${c.name}</td><td style="font-size:11px;color:var(--txt2)">${c.email||'—'}</td><td style="font-size:11px;color:var(--txt2)">${m?.shop_name||'—'}</td><td><span class="pill ${c.tier==='Gold'?'pa':c.tier==='Platinum'?'pp':'pg'}">${c.tier}</span></td><td style="font-weight:600">${(c.points||0).toLocaleString('fr-FR')}</td><td>${wi||'—'}</td><td style="font-size:11px;color:var(--txt2)">${fmtDate(c.join_date)}</td><td><button class="ab" onclick="showClientDetail('${c.id}')">Détails</button></td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function populateMerchantFilter(){
+  const sel=document.getElementById('cm');if(!sel)return;
+  sel.innerHTML='<option value="">Tous les commerçants</option>'+allMerchants.map(m=>`<option value="${m.id}">${m.shop_name}</option>`).join('');
+}
+
+async function renderLogs(){
+  const lf=document.getElementById('lf')?.value||'';
+  let q=sb.from('logs').select('*').order('created_at',{ascending:false}).limit(200);
+  if(lf)q=q.eq('type',lf);
+  const{data}=await q;
+  document.getElementById('log-list').innerHTML=(data||[]).length?
+    data.map(l=>`<div class="log-row"><span class="log-type log-${l.type}">${l.type.toUpperCase()}</span><span style="flex:1;color:var(--txt2)">${l.message}</span><span class="log-time">${fmtTs(l.created_at)}</span></div>`).join('')
+    :'<div style="font-size:12px;color:var(--txt3);padding:12px 0">Aucun log.</div>';
+}
+async function clearLogs(){
+  if(!await confirmToast('Effacer tous les logs ?'))return;
+  await sb.from('logs').delete().not('id','is',null);
+  renderLogs();toast('Logs effacés');
+}
+
+// MERCHANT CRUD
+function openAddMerchant(){
+  document.getElementById('mo-m-title').textContent='Nouveau commerçant';
+  document.getElementById('edit-mid').value='';
+  ['m-shop','m-email','m-phone','m-city'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-pass').value=genPass();
+  document.getElementById('m-pts').value='10';
+  document.getElementById('save-m-btn').textContent='Créer le compte';
+  document.getElementById('mo-merchant').classList.remove('h');
+}
+function editMerchant(id){
+  const m=allMerchants.find(x=>x.id===id);if(!m)return;
+  document.getElementById('mo-m-title').textContent='Modifier le commerçant';
+  document.getElementById('edit-mid').value=id;
+  document.getElementById('m-shop').value=m.shop_name;
+  document.getElementById('m-email').value=m.email;
+  document.getElementById('m-pass').value='';
+  document.getElementById('m-phone').value=m.phone||'';
+  document.getElementById('m-city').value=m.city||'';
+  document.getElementById('m-pts').value=m.pts_per_euro||10;
+  document.getElementById('m-plan').value=m.plan||'Starter';
+  document.getElementById('save-m-btn').textContent='Enregistrer';
+  document.getElementById('mo-merchant').classList.remove('h');
+}
+async function saveMerchant(){
+  const shop=document.getElementById('m-shop').value.trim();
+  const email=document.getElementById('m-email').value.trim().toLowerCase();
+  const pass=document.getElementById('m-pass').value.trim();
+  const editId=document.getElementById('edit-mid').value;
+  if(!shop||!email||(!editId&&!pass)){toast('Champs obligatoires manquants','err');return;}
+  const btn=document.getElementById('save-m-btn');btn.disabled=true;btn.textContent='Enregistrement...';
+  const obj={shop_name:shop,email,phone:document.getElementById('m-phone').value.trim(),city:document.getElementById('m-city').value.trim(),plan:document.getElementById('m-plan').value,pts_per_euro:parseInt(document.getElementById('m-pts').value)||10};
+  if(pass)obj.pass=pass;
+  try{
+    if(editId){
+      const{error}=await sb.from('merchants').update(obj).eq('id',editId);
+      if(error){toast('Erreur: '+error.message,'err');btn.disabled=false;btn.textContent='Enregistrer';return;}
+      await addLog('info',`Commerçant "${shop}" modifié`);toast('Mis à jour','ok');
+    }else{
+      // Check duplicate email
+      const{data:dup}=await sb.from('merchants').select('id').eq('email',email).maybeSingle();
+      if(dup){toast('Un commerçant avec cet email existe déjà.','err');btn.disabled=false;btn.textContent='Créer le compte';return;}
+      const{error}=await sb.from('merchants').insert({...obj,active:true,card_color:'#1C1C1E'});
+      if(error){toast('Erreur: '+error.message,'err');btn.disabled=false;btn.textContent='Créer le compte';return;}
+      await addLog('ok',`Nouveau commerçant créé : "${shop}" (${email})`);toast('Compte commerçant créé !','ok');
+    }
+  }catch(e){toast('Erreur: '+e.message,'err');}
+  btn.disabled=false;cm('mo-merchant');loadAll();
+}
+async function toggleMerchant(id){
+  const m=allMerchants.find(x=>x.id===id);if(!m)return;
+  const{error}=await sb.from('merchants').update({active:!m.active}).eq('id',id);
+  if(error){toast('Erreur','err');return;}
+  await addLog(m.active?'warn':'ok',`Commerçant "${m.shop_name}" ${m.active?'suspendu':'réactivé'}`);
+  toast(`${m.active?'Suspendu':'Réactivé'}`,m.active?'':'ok');loadAll();
+}
+
+// BUG 5 FIX: Toggle ALL cards for a client (same email = same person)
+async function toggleClientGlobal(id,isCurrentlySuspended){
+  const c=allClients.find(x=>x.id===id);if(!c)return;
+  const newActive=!!isCurrentlySuspended; // if suspended, reactivate; if active, suspend
+  // Suspend/reactivate ALL rows with same email
+  const{error}=await sb.from('clients').update({active:newActive}).eq('email',c.email);
+  if(error){toast('Erreur: '+error.message,'err');return;}
+  await addLog(newActive?'ok':'warn',`Client "${c.name}" (${c.email}) ${newActive?'réactivé':'suspendu'} globalement (${allClients.filter(x=>x.email===c.email).length} carte(s))`);
+  toast(`Client ${newActive?'réactivé':'suspendu'} (toutes ses cartes)`,newActive?'ok':'');
+  await loadAll();
+}
+
+async function deleteClientGlobal(id,name,email){
+  const cardCount=allClients.filter(c=>c.email===email).length;
+  if(!await confirmToast('Supprimer définitivement ce client et toutes ses cartes ?'))return;
+  // Delete all cards for this email
+  const{error}=await sb.from('clients').delete().eq('email',email);
+  if(error){toast('Erreur: '+error.message,'err');return;}
+  await addLog('warn',`Client "${name}" (${email}) supprimé définitivement (${cardCount} carte(s))`);
+  toast(`Client supprimé (${cardCount} carte(s))`);await loadAll();
+}
+async function deleteMerchant(id){
+  const m=allMerchants.find(x=>x.id===id);
+  if(!await confirmToast('Supprimer ce commerce et toutes ses données ?'))return;
+  const{error}=await sb.from('merchants').delete().eq('id',id);
+  if(error){toast('Erreur: '+error.message,'err');return;}
+  await addLog('warn',`Commerçant "${m?.shop_name}" supprimé`);
+  toast('Commerçant supprimé');loadAll();
+}
+
+async function viewMerchant(id){
+  const m=allMerchants.find(x=>x.id===id);if(!m)return;
+  const clients=allClients.filter(c=>c.merchant_id===id);
+  const pts=allTxns.filter(t=>t.merchant_id===id&&t.type==='earn').reduce((s,t)=>s+(t.points||0),0);
+  const{data:rwds}=await sb.from('rewards').select('*').eq('merchant_id',id);
+  document.getElementById('merchant-detail-content').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap">
+      <div><div style="font-size:20px;font-weight:800">${m.shop_name}</div><div style="font-size:12px;color:var(--txt2);margin-top:4px">${m.email} · ${m.city||'—'} · <span class="pill pp">${m.plan}</span></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ab" onclick="editMerchant('${m.id}');sw('merchants')">Modifier</button><button class="fbtn" onclick="impersonate('${m.id}')">Accéder au dashboard</button></div>
+    </div>
+    <div class="mv-grid">
+      <div class="kcard"><div class="klbl">Clients</div><div class="kval">${clients.length}</div></div>
+      <div class="kcard"><div class="klbl">Points distribués</div><div class="kval">${pts>=1000?(pts/1000).toFixed(1)+'k':pts}</div></div>
+      <div class="kcard"><div class="klbl">Transactions</div><div class="kval">${allTxns.filter(t=>t.merchant_id===id).length}</div></div>
+      <div class="kcard"><div class="klbl">Récompenses actives</div><div class="kval">${(rwds||[]).filter(r=>r.active).length}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="card">
+        <div class="ctitle">Compte commerçant</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2.2;color:var(--txt2)">
+          Email : <span style="color:var(--txt)">${m.email}</span><br>
+          Plan : <span style="color:var(--txt)">${m.plan}</span><br>
+          Pts/euro : <span style="color:var(--txt)">${m.pts_per_euro||10}</span>
+        </div>
+      </div>
+      <div class="card"><div class="ctitle">Clients récents</div>${clients.slice(0,5).map(c=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${c.name}</span><span style="color:var(--accent2)">${(c.points||0).toLocaleString('fr-FR')} pts</span></div>`).join('')||'<div style="font-size:12px;color:var(--txt3)">Aucun client</div>'}</div>
+    </div>`;
+  sw('merchant-detail');
+}
+
+function impersonate(id){
+  const m=allMerchants.find(x=>x.id===id);if(!m)return;
+  sessionStorage.setItem('los_merchant_sess',JSON.stringify({id,shopName:m.shop_name,email:m.email,ptsPerEuro:m.pts_per_euro||10,cardColor:m.card_color||'#1C1C1E'}));
+  addLog('info',`Admin a accédé au compte "${m.shop_name}"`);
+  window.open('merchant.html','_blank');
+}
+
+async function showClientDetail(id){
+  const c=allClients.find(x=>x.id===id);if(!c)return;
+  const m=allMerchants.find(x=>x.id===c.merchant_id);
+  const{data:txns}=await sb.from('transactions').select('*').eq('client_id',id).order('created_at',{ascending:false}).limit(10);
+  document.getElementById('mo-c-name').textContent=c.name;
+  document.getElementById('mo-c-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem">
+      <div class="kcard" style="padding:.75rem"><div class="klbl">Points</div><div class="kval" style="font-size:18px">${(c.points||0).toLocaleString('fr-FR')}</div></div>
+      <div class="kcard" style="padding:.75rem"><div class="klbl">Visites</div><div class="kval" style="font-size:18px">${c.visits||0}</div></div>
+      <div class="kcard" style="padding:.75rem"><div class="klbl">Niveau</div><div class="kval" style="font-size:18px">${c.tier}</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--txt2);margin-bottom:.75rem;font-family:'JetBrains Mono',monospace;line-height:1.8">
+      Email : ${c.email||'—'} · Tél : ${c.phone||'—'}<br>
+      Commerce : ${m?.shop_name||'—'}<br>
+      Wallet : ${(c.wallet||[]).join(', ')||'Aucun'}
+    </div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">Transactions récentes</div>
+    <div style="max-height:200px;overflow-y:auto">${(txns||[]).map(t=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--txt2)">${t.description||''}</span><span style="color:${t.type==='earn'?'var(--green)':'var(--red)'}">${t.type==='earn'?'+':'-'}${t.points} pts</span><span style="color:var(--txt3);font-size:10px">${fmtDate(t.created_at)}</span></div>`).join('')||'<div style="font-size:11px;color:var(--txt3)">Aucune transaction</div>'}</div>`;
+  document.getElementById('mo-client').classList.remove('h');
+}
+
+function confirmToast(msg){
+  return new Promise(resolve=>{
+    const t=document.getElementById('toast');
+    t.innerHTML=`<span>${msg}</span><button onclick="this.closest('.toast').dataset.res='1'" style="margin-left:10px;padding:3px 10px;border-radius:4px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;font-size:12px">Oui</button><button onclick="this.closest('.toast').dataset.res='0'" style="margin-left:6px;padding:3px 10px;border-radius:4px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;font-size:12px">Non</button>`;
+    t.className='toast on';clearTimeout(t._t);
+    const check=setInterval(()=>{if(t.dataset.res!==undefined){const v=t.dataset.res==='1';delete t.dataset.res;t.classList.remove('on');t.innerHTML='';clearInterval(check);resolve(v);}},80);
+    t._t=setTimeout(()=>{t.classList.remove('on');t.innerHTML='';delete t.dataset.res;clearInterval(check);resolve(false);},8000);
+  });
+}
+function sw(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',['dashboard','merchants','clients','logs','settings'][i]===id));
+  document.getElementById('p-'+id)?.classList.add('on');
+  if(id==='logs')renderLogs();
+}
+function cm(id){document.getElementById(id).classList.add('h');}
+function genPass(){const c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';let p='';for(let i=0;i<10;i++)p+=c[Math.floor(Math.random()*c.length)];return p;}
+function fmtDate(iso){if(!iso)return'—';const d=new Date(iso),now=new Date(),diff=Math.floor((now-d)/86400000);if(diff===0)return"Aujourd'hui";if(diff===1)return'Hier';return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});}
+function fmtTs(iso){if(!iso)return'—';return new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast on'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3000);}
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.add('h');}));
+
+(()=>{
+  const sess=sessionStorage.getItem('los_admin');
+  if(sess){document.getElementById('auth').classList.add('h');document.getElementById('app').classList.remove('h');loadAll();}
+})();
+</script>
+
+<!-- Modal Mentions légales -->
+<div class="legal-ov h" id="mo-legal" onclick="if(event.target===this)this.classList.add('h')">
+  <div class="legal-sheet">
+    <h2>Mentions légales <button class="legal-close" onclick="document.getElementById('mo-legal').classList.add('h')">×</button></h2>
+    <h3>Éditeur du service</h3>
+    <p>LoyaltyOS est un service de fidélité dématérialisée édité par <strong>[Votre Société]</strong>, [forme juridique], au capital de [X €], immatriculée au RCS de [Ville] sous le numéro [SIRET].</p>
+    <p>Siège social : [Adresse complète]<br>Email : <a href="mailto:contact@loyaltyos.fr">contact@loyaltyos.fr</a><br>Directeur de la publication : [Nom Prénom]</p>
+    <h3>Hébergement</h3>
+    <p>Service hébergé par <strong>Vercel Inc.</strong> (San Francisco, USA) et <strong>Supabase Inc.</strong> Des clauses contractuelles standard encadrent les transferts hors UE conformément au RGPD.</p>
+    <h3>Propriété intellectuelle</h3>
+    <p>Tous les contenus de LoyaltyOS (textes, logos, interface) sont protégés par le droit d'auteur. Toute reproduction sans autorisation est interdite.</p>
+    <h3>Données personnelles (RGPD)</h3>
+    <p>LoyaltyOS collecte : nom, email, téléphone, historique de points. Ces données sont :</p>
+    <ul>
+      <li>Conservées pour la durée du contrat + 3 ans</li>
+      <li>Jamais revendues à des tiers</li>
+      <li>Accessibles, modifiables et supprimables sur demande</li>
+    </ul>
+    <p>Pour exercer vos droits RGPD : <a href="mailto:contact@loyaltyos.fr">contact@loyaltyos.fr</a></p>
+    <h3>Cookies</h3>
+    <p>Aucun cookie publicitaire. La session utilise <code>sessionStorage</code>, effacé à la fermeture du navigateur.</p>
+    <h3>Responsabilité</h3>
+    <p>LoyaltyOS est fourni "en l'état". L'éditeur décline toute responsabilité pour une interruption de service indépendante de sa volonté.</p>
+  </div>
+</div>
+
+<!-- Modal Contact -->
+<div class="legal-ov h" id="mo-contact" onclick="if(event.target===this)this.classList.add('h')">
+  <div class="legal-sheet">
+    <h2>Nous contacter <button class="legal-close" onclick="document.getElementById('mo-contact').classList.add('h')">×</button></h2>
+    <h3>Support</h3>
+    <p>📧 Email : <a href="mailto:contact@loyaltyos.fr">contact@loyaltyos.fr</a></p>
+    <p>🌐 Site : <a href="https://loyaltyos1.vercel.app" target="_blank">loyaltyos1.vercel.app</a></p>
+    <p>📞 Téléphone : [à compléter]</p>
+    <p>Horaires : [à compléter] — Délai de réponse moyen : 48h</p>
+    <h3>Demande de compte commerçant</h3>
+    <p>Contactez-nous par email avec votre nom, commerce et ville. Nous vous répondons sous 48h.</p>
+    <h3>Droits RGPD</h3>
+    <p>Suppression, rectification ou portabilité de vos données : <a href="mailto:contact@loyaltyos.fr">contact@loyaltyos.fr</a></p>
+  </div>
+</div>
+
+<div class="legal-footer">
+  <a onclick="document.getElementById('mo-legal').classList.remove('h')">Mentions légales</a>
+  <span style="opacity:.3">·</span>
+  <a onclick="document.getElementById('mo-contact').classList.remove('h')">Contact</a>
+  <span style="opacity:.3">·</span>
+  <span>© 2025 LoyaltyOS</span>
+</div>
+</body>
+</html>

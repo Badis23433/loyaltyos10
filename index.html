@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>LoyaltyOS — Fidélité dématérialisée</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D0A08;
+  --bg2:#141210;
+  --bg3:#1E1A17;
+  --bg4:#272320;
+  --txt:#F5F0EC;
+  --txt2:#9A8F88;
+  --txt3:#524840;
+  --accent:#FF6B2B;
+  --accent2:#FF9A6C;
+  --accent-bg:rgba(255,107,43,.13);
+  --purple:#8B5CF6;
+  --green:#2DD4A0;
+  --green-bg:rgba(45,212,160,.1);
+  --red:#FF5C6A;
+  --red-bg:rgba(255,92,106,.1);
+  --gold:#F5C542;
+  --border:rgba(255,255,255,.07);
+  --border2:rgba(255,255,255,.12);
+  --r:16px;--rm:12px;
+}
+html,body{min-height:100vh;font-family:'DM Sans',sans-serif;color:var(--txt);background:var(--bg);-webkit-font-smoothing:antialiased}
+
+/* ══ DESKTOP LAYOUT ══ */
+.page{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+
+/* ══ LEFT — LANDING (desktop only) ══ */
+.landing{
+  background:linear-gradient(150deg,#1A0E06 0%,#160C04 50%,#0D0A08 100%);
+  padding:3rem;display:flex;flex-direction:column;justify-content:space-between;
+  position:relative;overflow:hidden;border-right:1px solid var(--border);
+}
+.landing::before{content:'';position:absolute;top:-100px;right:-60px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,43,.16),transparent 68%);pointer-events:none}
+.landing::after{content:'';position:absolute;bottom:-60px;left:-40px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.1),transparent 68%);pointer-events:none}
+
+.l-logo{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:7px;position:relative;z-index:1}
+.l-logo em{font-style:normal;color:var(--accent2)}
+.l-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+.l-main{position:relative;z-index:1;padding:2.5rem 0 1.5rem}
+.l-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:99px;background:var(--accent-bg);border:1px solid rgba(255,107,43,.3);font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.5rem}
+.l-h1{font-family:'Syne',sans-serif;font-size:clamp(28px,3vw,40px);font-weight:800;line-height:1.07;letter-spacing:-.025em;margin-bottom:1rem}
+.l-h1 span{background:linear-gradient(95deg,var(--accent2),#FFD4B8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.l-desc{font-size:14px;color:var(--txt2);line-height:1.85;max-width:400px;margin-bottom:2rem}
+
+.l-feats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:2rem}
+.l-feat{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--rm);padding:14px 16px}
+.l-feat-ico{font-size:18px;margin-bottom:7px}
+.l-feat-t{font-size:12px;font-weight:500;color:var(--txt);line-height:1.45}
+
+.l-stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:relative;z-index:1}
+.l-stat{padding:14px 16px;border-right:1px solid var(--border)}
+.l-stat:last-child{border-right:none}
+.l-stat-n{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent2)}
+.l-stat-l{font-size:10px;color:var(--txt3);margin-top:2px;line-height:1.45}
+
+/* footer desktop (hidden on mobile, use .page-foot instead) */
+.l-foot{display:flex;gap:16px;font-size:11px;color:var(--txt3);position:relative;z-index:1;padding-top:1.25rem;border-top:1px solid var(--border);margin-top:1.5rem;flex-wrap:wrap;align-items:center}
+.l-foot a{color:var(--txt3);text-decoration:none;cursor:pointer;transition:color .15s}
+.l-foot a:hover{color:var(--txt2)}
+
+/* ══ RIGHT — PORTALS ══ */
+.portals-wrap{background:var(--bg2);display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Mode switcher ── */
+.mode-switch{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.mode-btn{flex:1;padding:1.1rem 1rem;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--txt3);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;position:relative}
+.mode-btn::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent);transform:scaleX(0);transition:transform .25s}
+.mode-btn.on{color:var(--txt)}
+.mode-btn.on::after{transform:scaleX(1)}
+
+/* ── Panes ── */
+.portal-pane{display:none;flex-direction:column;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.portal-pane.on{display:flex}
+
+/* ── Client hero ── */
+.client-hero{background:linear-gradient(150deg,#1C0E06,#160C04);padding:1.75rem 2rem 1.5rem;position:relative;overflow:hidden;border-bottom:1px solid var(--border);flex-shrink:0}
+.client-hero::after{content:'';position:absolute;top:-50px;right:-30px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,43,.16),transparent 70%);pointer-events:none}
+.ch-logo{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--txt3);margin-bottom:1.1rem}
+.ch-logo em{font-style:normal;color:var(--accent2)}
+
+.mini-card{background:linear-gradient(135deg,#2A1506,#3D1E08,#1E1000);border-radius:14px;padding:15px 18px;border:1px solid rgba(255,107,43,.28);display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 32px rgba(0,0,0,.45);position:relative;overflow:hidden;margin-bottom:1.1rem}
+.mini-card::before{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;background:rgba(255,107,43,.1)}
+.mc-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:4px}
+.mc-pts{font-size:11px;color:rgba(255,255,255,.5);line-height:1.6}
+.mc-pts strong{color:var(--gold);font-weight:600}
+.mc-tier{display:inline-block;padding:3px 9px;border-radius:99px;background:rgba(245,197,66,.15);border:1px solid rgba(245,197,66,.3);font-size:10px;font-weight:600;color:var(--gold);margin-top:7px}
+.mc-ico{font-size:28px;opacity:.85;flex-shrink:0;margin-left:12px}
+
+.ch-tagline{font-size:13px;color:var(--txt2);line-height:1.7}
+.ch-tagline strong{color:var(--txt);font-weight:500}
+
+/* ── Merchant hero ── */
+.merchant-hero{background:linear-gradient(150deg,#0A130A,#0C160C);padding:1.75rem 2rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0}
+.mh-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.2);font-size:11px;font-weight:600;color:var(--green);letter-spacing:.06em;text-transform:uppercase;margin-bottom:1rem}
+.mh-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:.6rem;color:var(--txt);line-height:1.15}
+.mh-desc{font-size:13px;color:var(--txt2);line-height:1.7}
+.trust-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:1rem}
+.trust-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt3);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:99px;padding:4px 10px}
+
+/* ── Forms ── */
+.form-area{padding:1.5rem 2rem;flex:1}
+.tabs{display:flex;background:var(--bg4);border-radius:var(--rm);padding:3px;margin-bottom:1.25rem}
+.tab-btn{flex:1;padding:9px 8px;border-radius:9px;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--txt3);cursor:pointer;transition:all .2s}
+.tab-btn.on{background:var(--bg3);color:var(--txt);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+.form-group{margin-bottom:11px}
+.form-label{display:block;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;font-weight:500}
+.form-input{width:100%;padding:14px 15px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--rm);font-size:16px;color:var(--txt);font-family:'DM Sans',sans-serif;outline:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,107,43,.12)}
+.form-input::placeholder{color:var(--txt3)}
+
+.btn-primary{width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:var(--rm);font-family:'Syne',sans-serif;font-size:14px;font-weight:800;cursor:pointer;margin-top:4px;letter-spacing:.02em;min-height:52px;transition:opacity .2s,transform .1s;box-shadow:0 4px 20px rgba(255,107,43,.35)}
+.btn-primary:hover{opacity:.92;box-shadow:0 6px 28px rgba(255,107,43,.45)}
+.btn-primary:active{transform:scale(.99)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+
+.err-msg{background:var(--red-bg);border:1px solid rgba(255,92,106,.3);color:var(--red);padding:10px 13px;border-radius:var(--rm);font-size:12px;margin-bottom:11px;display:none;line-height:1.5}
+.suc-msg{background:var(--green-bg);border:1px solid rgba(45,212,160,.3);color:var(--green);padding:10px 13px;border-radius:var(--rm);font-size:12px;margin-bottom:11px;display:none;line-height:1.5}
+.form-hidden{display:none}
+.form-hint{font-size:11px;color:var(--txt3);text-align:center;margin-top:12px;line-height:1.6}
+.form-hint a{color:var(--accent2);cursor:pointer;text-decoration:none}
+.sep{height:1px;background:var(--border);margin:16px 0}
+.no-account-note{font-size:12px;color:var(--txt3);text-align:center;line-height:1.6;padding-top:4px}
+
+/* ══ GLOBAL ══ */
+.admin-dot{position:fixed;bottom:12px;right:12px;width:9px;height:9px;border-radius:50%;background:var(--accent);opacity:.05;cursor:pointer;transition:opacity .3s}
+.admin-dot:hover{opacity:.28}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg3);border:1px solid var(--border2);color:var(--txt);padding:11px 20px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap;max-width:92vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+
+/* ══ PAGE FOOTER (legal) — always visible ══ */
+.page-foot{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--bg);border-top:1px solid var(--border);
+  padding:10px 16px;
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  font-size:11px;color:var(--txt3);z-index:100;
+}
+.page-foot a{color:var(--txt3);text-decoration:none;cursor:pointer;transition:color .15s}
+.page-foot a:hover{color:var(--txt2)}
+/* Push form content above fixed footer */
+.portals-wrap{padding-bottom:44px}
+
+/* ══ LEGAL MODAL ══ */
+.legal-ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:900;display:flex;align-items:flex-end;justify-content:center}
+.legal-ov.h{display:none}
+.legal-sheet{background:var(--bg3);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:82vh;overflow-y:auto;padding:1.5rem;border-top:1px solid var(--border2)}
+.legal-sheet h2{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center}
+.legal-sheet h3{font-size:13px;font-weight:600;margin:1rem 0 .4rem;color:var(--txt)}
+.legal-sheet p,.legal-sheet li{font-size:12px;color:var(--txt2);line-height:1.7;margin-bottom:.4rem}
+.legal-sheet ul{padding-left:1.2rem;margin-bottom:.6rem}
+.legal-sheet a{color:var(--accent2);text-decoration:none}
+.legal-close{background:none;border:none;color:var(--txt2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:900px){
+  /* On mobile: hide landing, show only portals */
+  .landing{display:none}
+  .page{grid-template-columns:1fr}
+  .portals-wrap{min-height:100vh;overflow-y:auto}
+
+  /* Mobile top header replaces landing */
+  .mobile-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 1.25rem;border-bottom:1px solid var(--border);
+    background:var(--bg);flex-shrink:0;
+  }
+  .mob-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--txt);letter-spacing:-.02em}
+  .mob-logo em{font-style:normal;color:var(--accent2)}
+  .mob-logo .l-dot{vertical-align:middle}
+  .mob-tagline{font-size:11px;color:var(--txt3)}
+
+  .mode-btn{font-size:12px;padding:.9rem .5rem;gap:5px}
+  .client-hero,.merchant-hero{padding:1.25rem}
+  .form-area{padding:1.25rem}
+  .mini-card{max-width:100%}
+  .trust-row{gap:5px}
+  .trust-item{font-size:10px;padding:3px 8px}
+}
+@media(min-width:901px){
+  /* Desktop: hide mobile header */
+  .mobile-header{display:none}
+  .portals-wrap{padding-bottom:0}
+  /* On desktop, footer is in landing panel */
+  .page-foot{display:none}
+  /* Restore left landing visible */
+  .landing{display:flex}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══ LEFT LANDING (desktop only) ═══ -->
+  <div class="landing">
+    <div class="l-logo">loyalty<em>OS</em><span class="l-dot"></span></div>
+    <div class="l-main">
+      <div class="l-badge">✦ Fidélité 100% dématérialisée</div>
+      <h1 class="l-h1">Vos clients reviennent.<br><span>Vraiment.</span></h1>
+      <p class="l-desc">Remplacez les cartes papier — carte dans le téléphone, points automatiques, récompenses sur-mesure.</p>
+      <div class="l-feats">
+        <div class="l-feat"><div class="l-feat-ico">📱</div><div class="l-feat-t">Carte numérique + code-barres unique</div></div>
+        <div class="l-feat"><div class="l-feat-ico">⚡</div><div class="l-feat-t">Points crédités en 3 secondes</div></div>
+        <div class="l-feat"><div class="l-feat-ico">🎁</div><div class="l-feat-t">Récompenses sur-mesure</div></div>
+        <div class="l-feat"><div class="l-feat-ico">📊</div><div class="l-feat-t">Dashboard temps réel</div></div>
+      </div>
+      <div class="l-stats">
+        <div class="l-stat"><div class="l-stat-n">+43%</div><div class="l-stat-l">dépense client fidèle</div></div>
+        <div class="l-stat"><div class="l-stat-n">×7</div><div class="l-stat-l">moins cher de fidéliser</div></div>
+        <div class="l-stat"><div class="l-stat-n">+30%</div><div class="l-stat-l">de visites en plus</div></div>
+      </div>
+    </div>
+    <div class="l-foot">
+      <a onclick="document.getElementById('mo-legal').classList.remove('h')">Mentions légales</a>
+      <a onclick="document.getElementById('mo-contact').classList.remove('h')">Contact</a>
+      <span style="margin-left:auto;opacity:.38">© 2025 LoyaltyOS</span>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT PORTALS ═══ -->
+  <div class="portals-wrap">
+
+    <!-- Mobile header (remplace le panneau landing) -->
+    <div class="mobile-header">
+      <div class="mob-logo">loyalty<em>OS</em> <span class="l-dot"></span></div>
+      <div class="mob-tagline">Fidélité dématérialisée</div>
+    </div>
+
+    <!-- Switcher client / commerçant -->
+    <div class="mode-switch">
+      <button class="mode-btn on" id="btn-client" onclick="switchMode('client')">
+        💳 Ma carte
+      </button>
+      <button class="mode-btn" id="btn-merchant" onclick="switchMode('merchant')">
+        🏪 Commerçant
+      </button>
+    </div>
+
+    <!-- ── CLIENT ── -->
+    <div class="portal-pane on" id="pane-client">
+      <div class="client-hero">
+        <div class="ch-logo">loyalty<em>OS</em></div>
+        <div class="mini-card">
+          <div>
+            <div class="mc-name">Votre carte personnelle</div>
+            <div class="mc-pts">Cumulez des points à chaque achat.<br>Ils ne disparaissent <strong>jamais</strong>.</div>
+            <div class="mc-tier">✦ Silver → Gold → Platinum</div>
+          </div>
+          <div class="mc-ico">🎁</div>
+        </div>
+        <div class="ch-tagline">Une seule appli, <strong>toutes vos cartes.</strong><br>Boulanger, café, resto — juste votre code-barres.</div>
+      </div>
+
+      <div class="form-area">
+        <div class="tabs">
+          <button class="tab-btn on" onclick="clientTab('login')">Me connecter</button>
+          <button class="tab-btn" onclick="clientTab('register')">Créer un compte</button>
+        </div>
+        <div class="err-msg" id="c-err"></div>
+        <div class="suc-msg" id="c-suc"></div>
+
+        <div id="c-login">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" id="c-email" type="email" placeholder="vous@exemple.fr" autocomplete="email" inputmode="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe</label>
+            <input class="form-input" id="c-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')clientLogin()">
+          </div>
+          <button class="btn-primary" id="c-login-btn" onclick="clientLogin()">Accéder à mes cartes →</button>
+          <p class="form-hint">Pas encore de compte ? <a onclick="clientTab('register')">Inscription gratuite</a></p>
+        </div>
+
+        <div id="c-register" class="form-hidden">
+          <div class="form-group">
+            <label class="form-label">Prénom et nom *</label>
+            <input class="form-input" id="r-name" type="text" placeholder="Sophie Cardin" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email *</label>
+            <input class="form-input" id="r-email" type="email" placeholder="vous@exemple.fr" autocomplete="email" inputmode="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe *</label>
+            <input class="form-input" id="r-pass" type="password" placeholder="Minimum 6 caractères" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input class="form-input" id="r-phone" type="tel" placeholder="+33 6 00 00 00 00" inputmode="tel">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Code du commerce</label>
+            <input class="form-input" id="r-code" type="text" placeholder="Demandez-le à votre commerçant">
+          </div>
+          <button class="btn-primary" id="c-reg-btn" onclick="clientRegister()">Créer mon compte gratuit →</button>
+          <p class="form-hint">Déjà un compte ? <a onclick="clientTab('login')">Se connecter</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COMMERÇANT ── -->
+    <div class="portal-pane" id="pane-merchant">
+      <div class="merchant-hero">
+        <div class="mh-chip">⚡ Tableau de bord commerçant</div>
+        <div class="mh-title">Votre programme<br>de fidélité clé en main</div>
+        <div class="mh-desc">Gérez vos clients, points et récompenses. En ligne en 5 minutes, zéro installation.</div>
+        <div class="trust-row">
+          <div class="trust-item"><span>✓</span> Zéro papier</div>
+          <div class="trust-item"><span>✓</span> Scan 3 sec</div>
+          <div class="trust-item"><span>✓</span> Temps réel</div>
+        </div>
+      </div>
+
+      <div class="form-area">
+        <div class="err-msg" id="m-err"></div>
+        <div class="form-group">
+          <label class="form-label">Email professionnel</label>
+          <input class="form-input" id="m-email" type="email" placeholder="contact@moncommerce.fr" autocomplete="email" inputmode="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mot de passe</label>
+          <input class="form-input" id="m-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')merchantLogin()">
+        </div>
+        <button class="btn-primary" id="m-login-btn" onclick="merchantLogin()">Accéder au tableau de bord →</button>
+        <div class="sep"></div>
+        <p class="no-account-note">Pas de compte ? Écrivez-nous via <a onclick="document.getElementById('mo-contact').classList.remove('h')" style="color:var(--accent2);cursor:pointer">Contact</a>.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer fixe mobile (mentions + contact) -->
+<div class="page-foot">
+  <a onclick="document.getElementById('mo-legal').classList.remove('h')">Mentions légales</a>
+  <span style="opacity:.3">·</span>
+  <a onclick="document.getElementById('mo-contact').classList.remove('h')">Contact</a>
+  <span style="opacity:.3">·</span>
+  <span style="opacity:.4">© 2025 LoyaltyOS</span>
+</div>
+
+<div class="admin-dot" onclick="window.location.href='admin.html'" title=""></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL='https://qqcfmbpixdeiczobqnqa.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxY2ZtYnBpeGRlaWN6b2JxbnFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjMxMDMsImV4cCI6MjA5MDM5OTEwM30.qTQvfalYS-V39M37BJdMQbXeMJBJTuzM44RMzoqmW5I';
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+const defaultMerchantConfig={welcome_bonus:0};
+function cfgKey(id){return`merchant_cfg_${id}`;}
+function toInt(v,f=0){const n=parseInt(v,10);return Number.isFinite(n)?n:f;}
+function tierFromLifetime(t){return t>=5000?'Platinum':t>=1000?'Gold':'Silver';}
+function parseCfg(v){try{return v?JSON.parse(v):{};}catch{return{};}}
+async function loadMerchantConfig(id){
+  const{data,error}=await sb.from('admin_config').select('config_value').eq('config_key',cfgKey(id)).maybeSingle();
+  if(error||!data?.config_value)return{...defaultMerchantConfig};
+  return{...defaultMerchantConfig,...parseCfg(data.config_value)};
+}
+const _qrParam=new URLSearchParams(window.location.search).get('m');
+const cs=sessionStorage.getItem('los_client_sess');
+const ms=sessionStorage.getItem('los_merchant_sess');
+if(cs){window.location.href=_qrParam?'client.html?join='+encodeURIComponent(_qrParam):'client.html';}
+if(ms)window.location.href='merchant.html';
+if(_qrParam){switchMode('client');clientTab('register');setTimeout(()=>{const i=document.getElementById('r-code');if(i)i.value=_qrParam;},120);}
+
+function switchMode(mode){
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.portal-pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById('btn-'+mode).classList.add('on');
+  document.getElementById('pane-'+mode).classList.add('on');
+}
+function clientTab(mode){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('on',i===(mode==='login'?0:1)));
+  document.getElementById('c-login').style.display=mode==='login'?'block':'none';
+  document.getElementById('c-register').style.display=mode==='register'?'block':'none';
+  hideMsg('c-err');hideMsg('c-suc');
+}
+async function clientLogin(){
+  const email=document.getElementById('c-email').value.trim().toLowerCase();
+  const pass=document.getElementById('c-pass').value;
+  hideMsg('c-err');
+  if(!email||!pass){showMsg('c-err','Remplissez email et mot de passe.');return;}
+  const btn=document.getElementById('c-login-btn');btn.disabled=true;btn.textContent='Connexion...';
+  try{
+    const{data,error}=await sb.rpc('verify_client_login',{p_email:email,p_pass:pass});
+    if(error||!data||data.length===0){showMsg('c-err','Email ou mot de passe incorrect.');btn.disabled=false;btn.textContent='Accéder à mes cartes →';return;}
+    sessionStorage.setItem('los_client_sess',JSON.stringify({email,pass,cards:data.map(c=>c.id),currentCard:data[0].id,name:data[0].name}));
+    window.location.href=_qrParam?'client.html?join='+encodeURIComponent(_qrParam):'client.html';
+  }catch(e){showMsg('c-err','Erreur de connexion. Réessayez.');btn.disabled=false;btn.textContent='Accéder à mes cartes →';}
+}
+async function clientRegister(){
+  const name=document.getElementById('r-name').value.trim();
+  const email=document.getElementById('r-email').value.trim().toLowerCase();
+  const pass=document.getElementById('r-pass').value;
+  const phone=document.getElementById('r-phone').value.trim();
+  const code=document.getElementById('r-code').value.trim();
+  hideMsg('c-err');hideMsg('c-suc');
+  if(!name||!email||!pass){showMsg('c-err','Nom, email et mot de passe obligatoires.');return;}
+  if(pass.length<6){showMsg('c-err','Mot de passe : minimum 6 caractères.');return;}
+  const btn=document.getElementById('c-reg-btn');btn.disabled=true;btn.textContent='Création...';
+  try{
+    let merchantId=null;
+    if(code){
+      const{data:byId}=await sb.from('merchants').select('id').eq('id',code).eq('active',true).limit(1);
+      if(byId?.length>0)merchantId=byId[0].id;
+      if(!merchantId){const{data:byName}=await sb.from('merchants').select('id').ilike('shop_name','%'+code+'%').eq('active',true).limit(1);if(byName?.length>0)merchantId=byName[0].id;}
+    }
+    if(!merchantId){const{data:m}=await sb.from('merchants').select('id').eq('active',true).order('created_at',{ascending:true}).limit(1);if(m?.length>0)merchantId=m[0].id;}
+    if(!merchantId){showMsg('c-err','Aucun commerce disponible. Contactez votre commerçant.');btn.disabled=false;btn.textContent='Créer mon compte gratuit →';return;}
+    const cfg=await loadMerchantConfig(merchantId);
+    const bonus=Math.max(0,toInt(cfg.welcome_bonus,0));
+    const{data:existHere}=await sb.from('clients').select('id').eq('email',email).eq('merchant_id',merchantId).maybeSingle();
+    if(existHere){showMsg('c-err','Vous avez déjà un compte ici. Connectez-vous.');btn.disabled=false;btn.textContent='Créer mon compte gratuit →';return;}
+    const{data:elsewhere}=await sb.from('clients').select('id,pass').eq('email',email).limit(1);
+    const effectivePass=elsewhere?.length>0?elsewhere[0].pass:pass;
+    if(elsewhere?.length>0&&effectivePass!==pass)showMsg('c-suc','Email reconnu — votre mot de passe existant sera utilisé.');
+    const{data:newC,error}=await sb.from('clients').insert({merchant_id:merchantId,name,email,pass:effectivePass,phone,points:bonus,tier:tierFromLifetime(bonus),wallet:[],visits:0,total_points_earned:bonus,active:true}).select('id,name,merchant_id').maybeSingle();
+    if(error){showMsg('c-err','Erreur: '+error.message);btn.disabled=false;btn.textContent='Créer mon compte gratuit →';return;}
+    if(bonus>0&&newC?.id)await sb.from('transactions').insert({client_id:newC.id,merchant_id:merchantId,type:'earn',points:bonus,amount_eur:0,description:'Bonus de bienvenue'});
+    showMsg('c-suc','Bienvenue ! Redirection...');
+    setTimeout(()=>{sessionStorage.setItem('los_client_sess',JSON.stringify({email,pass:effectivePass,cards:[newC.id],currentCard:newC.id,name:newC.name}));window.location.href=_qrParam?'client.html?join='+encodeURIComponent(_qrParam):'client.html';},1200);
+  }catch(e){showMsg('c-err','Erreur: '+e.message);btn.disabled=false;btn.textContent='Créer mon compte gratuit →';}
+}
+async function merchantLogin(){
+  const email=document.getElementById('m-email').value.trim().toLowerCase();
+  const pass=document.getElementById('m-pass').value;
+  hideMsg('m-err');
+  if(!email||!pass){showMsg('m-err','Remplissez email et mot de passe.');return;}
+  const btn=document.getElementById('m-login-btn');btn.disabled=true;btn.textContent='Connexion...';
+  try{
+    const{data:rows,error}=await sb.rpc('verify_merchant_login',{p_email:email,p_pass:pass});
+    const data=rows?.length>0?rows[0]:null;
+    if(error||!data){showMsg('m-err','Email ou mot de passe incorrect.');btn.disabled=false;btn.textContent='Accéder au tableau de bord →';return;}
+    sessionStorage.setItem('los_merchant_sess',JSON.stringify({id:data.id,shopName:data.shop_name,email:data.email,ptsPerEuro:data.pts_per_euro||10,cardColor:data.card_color||'#1C1C1E'}));
+    window.location.href='merchant.html';
+  }catch(e){showMsg('m-err','Erreur de connexion. Réessayez.');btn.disabled=false;btn.textContent='Accéder au tableau de bord →';}
+}
+function showMsg(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function hideMsg(id){document.getElementById(id).style.display='none';}
+function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast on'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3000);}
+</script>
+
+<!-- MODALS LÉGAUX -->
+<div class="legal-ov h" id="mo-legal" onclick="if(event.target===this)this.classList.add('h')">
+  <div class="legal-sheet">
+    <h2>Mentions légales <button class="legal-close" onclick="document.getElementById('mo-legal').classList.add('h')">×</button></h2>
+    <h3>Éditeur</h3>
+    <p>LoyaltyOS — service de fidélité dématérialisée édité par <strong>[Votre Société]</strong>, [forme juridique], SIRET [à compléter].</p>
+    <p>Siège : [Adresse] · Email : contact@loyaltyos.fr · Directeur de publication : [Nom]</p>
+    <h3>Hébergement</h3>
+    <p><strong>Vercel Inc.</strong> (San Francisco, USA) · <strong>Supabase Inc.</strong> Transferts hors UE encadrés par clauses contractuelles RGPD.</p>
+    <h3>Données personnelles (RGPD)</h3>
+    <p>Données collectées : nom, email, téléphone, historique points. Conservées contrat + 3 ans. Jamais revendues. Droits : contact@loyaltyos.fr</p>
+    <h3>Cookies</h3>
+    <p>Aucun cookie publicitaire. Session via <code>sessionStorage</code>, effacé à la fermeture du navigateur.</p>
+  </div>
+</div>
+<div class="legal-ov h" id="mo-contact" onclick="if(event.target===this)this.classList.add('h')">
+  <div class="legal-sheet">
+    <h2>Contact <button class="legal-close" onclick="document.getElementById('mo-contact').classList.add('h')">×</button></h2>
+    <h3>Support</h3>
+    <p>📧 contact@loyaltyos.fr · Réponse sous 48h</p>
+    <p>🌐 <a href="https://loyaltyos1.vercel.app" target="_blank">loyaltyos1.vercel.app</a></p>
+    <h3>Compte commerçant</h3>
+    <p>Envoyez votre nom, commerce et ville par email. Réponse sous 48h.</p>
+    <h3>RGPD</h3>
+    <p>Suppression / rectification / portabilité : contact@loyaltyos.fr</p>
+  </div>
+</div>
+</body>
+</html>
