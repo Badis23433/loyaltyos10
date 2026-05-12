@@ -481,8 +481,8 @@ select.fi option{background:var(--bg);color:var(--txt)}
           <select class="pos-reward-sel" id="imm-reward">
             <option value="">🎁 Aucune récompense</option>
           </select>
-          <button class="pos-validate" id="pos-validate-btn" onclick="">
-            VALIDER
+          <button id="pos-validate-btn" class="sbtn validate-btn" onclick="processGlobalCheckout()">
+             VALIDER L'ENCAISSEMENT
           </button>
         </div>
 
@@ -1203,69 +1203,89 @@ function getProjectedCheckoutPoints(client){
   return (client.points || 0) + earned;
 }
 
-async function processGlobalCheckout(){
+async function processGlobalCheckout() {
+    console.log("Tentative de validation..."); // Pour vérifier dans la console si le clic est détecté
 
-  // PROTECTION double-clic
-  if(payInProgress){toast('Traitement en cours…');return;}
-  const client=selectedCheckoutClient();
-  const amount=payAmt;
-  const rewardId=document.getElementById('imm-reward')?.value||'';
-
-  // Validation minimale : client OU montant
-  if(!client&&!amount){toast('Scannez ou sélectionnez un client','err');return;}
-  if(!client){toast('Sélectionnez un client avant de valider','err');return;}
-
-  const reward=rewardId?_rewards.find(r=>r.id===rewardId):null;
-  const projectedPoints = client
-     ? getProjectedCheckoutPoints(client)
-     : 0;
-
-  if(reward && !rewardTierAllowed(client,reward)){
-    toast(`${esc(client.name)} n'a pas le niveau requis pour cette récompense`,'err');
-    return;
-  }
-  if(reward && projectedPoints<(reward.points||0)){
-    toast(`${esc(client.name)} n'a pas assez de points`,'err');
-    return;
-  }
-
-  payInProgress=true;
-  const btn=document.getElementById('pos-validate-btn');
-  if(btn){btn.disabled=true;btn.textContent='Traitement…';}
-
-  try{
-    // 1. Encaissement points si montant saisi
-    if(amount>0){
-      const pts=computeEarnPts(client,amount);
-      await applyPts(client.id,pts.finalPts,'earn',`Achat ${amount.toFixed(2)}€`,amount);
-      toast(`+${pts.finalPts} pts crédités à ${esc(client.name)}`,'ok');
+    // 1. Vérifications de base
+    if (typeof payInProgress !== 'undefined' && payInProgress) {
+        toast('Traitement en cours...', 'info');
+        return;
     }
 
-    // 2. Récompense si sélectionnée
-    if(reward){
-      await applyPts(client.id,reward.points,'redeem',`Récompense: ${reward.name}`,0);
-      const{data:rwCount}=await sb.from('rewards').select('usage_count').eq('id',reward.id).maybeSingle();
-      await sb.from('rewards').update({usage_count:(rwCount?.usage_count||0)+1}).eq('id',reward.id);
-      toast(`✓ Récompense "${esc(reward.name)}" appliquée`,'ok');
+    // Récupération sécurisée du client
+    const client = typeof selectedCheckoutClient === 'function' ? selectedCheckoutClient() : null;
+    if (!client) {
+        toast('Veuillez d\'abord sélectionner un client', 'err');
+        return;
     }
 
-    // 3. Reset montant — garde le client pour encaissement suivant
-    setPosAmount('');
-    const rSel=document.getElementById('imm-reward');if(rSel)rSel.value='';
+    // Récupération sécurisée du montant (on vérifie l'input ou la variable globale)
+    const amountInput = document.getElementById('imm-pay-amt');
+    const amount = amountInput ? parseFloat(amountInput.value) || 0 : (typeof payAmt !== 'undefined' ? payAmt : 0);
+    
+    const rewardId = document.getElementById('imm-reward')?.value || '';
 
-    // 4. applyPts() appelle renderAll() en interne.
-    if(!amount&&!reward)renderImmersion();
-  } catch(err) { 
-    // On fusionne les erreurs ici
-    console.error(err);
-    toast('Erreur: ' + (err.message || 'Validation caisse échouée'), 'err');
+    if (amount <= 0 && !rewardId) {
+        toast('Saisissez un montant ou choisissez une récompense', 'err');
+        return;
+    }
 
-  } finally {
-    // Le finally intervient TOUJOURS à la fin, qu'il y ait eu une erreur ou non
-    payInProgress = false;
-    if (typeof updatePosBtnState === 'function') updatePosBtnState();
-  }
+    // 2. Lancement du traitement
+    payInProgress = true;
+    const btn = document.getElementById('pos-validate-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Chargement...';
+    }
+
+    try {
+        // A. Traitement de l'achat (Points positifs)
+        if (amount > 0) {
+            const pts = computeEarnPts(client, amount);
+            await applyPts(client.id, pts.finalPts, 'earn', `Achat ${amount.toFixed(2)}€`, amount);
+            console.log("Points crédités");
+        }
+
+        // B. Traitement de la récompense (Points négatifs)
+        if (rewardId) {
+            const reward = _rewards.find(r => r.id === rewardId);
+            if (reward) {
+                // On vérifie une dernière fois les points
+                if (client.points_balance < reward.points) {
+                    throw new Error("Points insuffisants pour cette récompense");
+                }
+                await applyPts(client.id, reward.points, 'redeem', `Récompense: ${reward.name}`, 0);
+                
+                // Update compteur récompense
+                const { data: rwCount } = await sb.from('rewards').select('usage_count').eq('id', reward.id).maybeSingle();
+                await sb.from('rewards').update({ usage_count: (rwCount?.usage_count || 0) + 1 }).eq('id', reward.id);
+                console.log("Récompense appliquée");
+            }
+        }
+
+        toast('Opération réussie !', 'ok');
+        
+        // C. Reset de l'interface
+        if (amountInput) amountInput.value = '';
+        const rSel = document.getElementById('imm-reward');
+        if (rSel) rSel.value = '';
+        if (typeof setPosAmount === 'function') setPosAmount('');
+
+    } catch (err) {
+        console.error("Erreur détaillée:", err);
+        toast(err.message || 'Erreur lors de la validation', 'err');
+    } finally {
+        // 3. Remise à zéro impérative
+        payInProgress = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'VALIDER L\'ENCAISSEMENT';
+        }
+        if (typeof renderImmersion === 'function') renderImmersion();
+        if (typeof updatePosBtnState === 'function') updatePosBtnState();
+    }
 }
+   
 function renderImmersion(){
   // Mise à jour du POS
   updatePosClientCard();
