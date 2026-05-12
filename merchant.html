@@ -1192,7 +1192,19 @@ document.addEventListener('click', e=>{
     document.getElementById('pos-dropdown')?.classList.remove('open');
 },{passive:true});
 
+function getProjectedCheckoutPoints(client){
+  if(!client) return 0;
+
+  const earned =
+    payAmt > 0
+      ? computeEarnPts(client, payAmt).finalPts
+      : 0;
+
+  return (client.points || 0) + earned;
+}
+
 async function processGlobalCheckout(){
+  try{
   // PROTECTION double-clic
   if(payInProgress){toast('Traitement en cours…');return;}
   const client=selectedCheckoutClient();
@@ -1204,7 +1216,9 @@ async function processGlobalCheckout(){
   if(!client){toast('Sélectionnez un client avant de valider','err');return;}
 
   const reward=rewardId?_rewards.find(r=>r.id===rewardId):null;
-  const projectedPoints=getProjectedCheckoutPoints(client);
+  const projectedPoints = client
+     ? getProjectedCheckoutPoints(client)
+     : 0;
 
   if(reward && !rewardTierAllowed(client,reward)){
     toast(`${esc(client.name)} n'a pas le niveau requis pour cette récompense`,'err');
@@ -1246,6 +1260,12 @@ async function processGlobalCheckout(){
   }finally{
     payInProgress=false;
     updatePosBtnState();
+  }catch(err){
+
+    console.error(err);
+
+    toast('Erreur validation caisse','err');
+
   }
 }
 
