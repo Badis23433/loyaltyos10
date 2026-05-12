@@ -1560,7 +1560,7 @@ function renderRewardDispatch(){
       _rewards.filter(r=>r.active).map(r=>`<option value="${r.id}">${r.emoji||'🎁'} ${r.name} (${r.points} pts)</option>`).join('');
   }
 }
-async async function applyImmersionReward(){
+async function applyImmersionReward(){
   if(payInProgress){toast('Traitement en cours…','err');return;}
   const client=selectedCheckoutClient();
   const rewardId=document.getElementById('imm-reward')?.value;
