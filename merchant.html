@@ -481,7 +481,7 @@ select.fi option{background:var(--bg);color:var(--txt)}
           <select class="pos-reward-sel" id="imm-reward">
             <option value="">🎁 Aucune récompense</option>
           </select>
-          <button class="pos-validate" id="pos-validate-btn" onclick="processGlobalCheckout()">
+          <button class="pos-validate" id="pos-validate-btn" onclick="">
             VALIDER
           </button>
         </div>
@@ -1229,7 +1229,7 @@ async function processGlobalCheckout(){
 
     // 2. Récompense si sélectionnée
     if(reward){
-      await applyPts(client.id,-reward.points,'redeem',`Récompense: ${reward.name}`,0);
+      await applyPts(client.id,reward.points,'redeem',`Récompense: ${reward.name}`,0);
       const{data:rwCount}=await sb.from('rewards').select('usage_count').eq('id',reward.id).maybeSingle();
       await sb.from('rewards').update({usage_count:(rwCount?.usage_count||0)+1}).eq('id',reward.id);
       toast(`✓ Récompense "${esc(reward.name)}" appliquée`,'ok');
