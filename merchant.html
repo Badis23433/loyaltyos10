@@ -1192,7 +1192,7 @@ document.addEventListener('click', e=>{
     document.getElementById('pos-dropdown')?.classList.remove('open');
 },{passive:true});
 
-async async function processGlobalCheckout(){
+async function processGlobalCheckout(){
   // PROTECTION double-clic
   if(payInProgress){toast('Traitement en cours…');return;}
   const client=selectedCheckoutClient();
