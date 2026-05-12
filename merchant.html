@@ -1255,18 +1255,15 @@ async function processGlobalCheckout(){
 
     // 4. applyPts() appelle renderAll() en interne.
     if(!amount&&!reward)renderImmersion();
-  }catch(e){
-    toast('Erreur: '+e.message,'err');
-  }finally{
-    payInProgress=false;
-    updatePosBtnState();
-  }catch(err){
-
+  } catch(err) { 
+    // On fusionne les erreurs ici
     console.error(err);
+    toast('Erreur: ' + (err.message || 'Validation caisse échouée'), 'err');
 
-    toast('Erreur validation caisse','err');
-
-  }
+  } finally {
+    // Le finally intervient TOUJOURS à la fin, qu'il y ait eu une erreur ou non
+    payInProgress = false;
+    if (typeof updatePosBtnState === 'function') updatePosBtnState();
   }
 }
 
