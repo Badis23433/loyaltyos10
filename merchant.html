@@ -1204,7 +1204,7 @@ function getProjectedCheckoutPoints(client){
 }
 
 async function processGlobalCheckout(){
-  try{
+
   // PROTECTION double-clic
   if(payInProgress){toast('Traitement en cours…');return;}
   const client=selectedCheckoutClient();
