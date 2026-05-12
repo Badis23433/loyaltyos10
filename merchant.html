@@ -1576,7 +1576,7 @@ async async function applyImmersionReward(){
   const btn=document.getElementById('pos-validate-btn');
   if(btn){btn.disabled=true;btn.textContent='Traitement…';}
   try{
-    await applyPts(client.id,-rw.points,'redeem','Récompense : '+rw.name);
+    await applyPts(client.id,rw.points,'redeem','Récompense : '+rw.name);
     const{data:r}=await sb.from('rewards').select('usage_count').eq('id',rewardId).maybeSingle();
     await sb.from('rewards').update({usage_count:(r?.usage_count||0)+1}).eq('id',rewardId);
     document.getElementById('imm-reward').value='';
@@ -1597,7 +1597,7 @@ async function applyRewardToClient(){
   if(!rewardTierAllowed(cl,rw)){toast(`${cl.name} n'a pas le niveau requis.`, 'err');return;}
   if((cl.points||0)<rw.points){toast(`${cl.name} n'a que ${cl.points||0} pts (requis: ${rw.points})`, 'err');return;}
   if(!await confirmToast("Appliquer cette récompense ?"))return;
-  await applyPts(cId,-rw.points,'redeem','Récompense : '+rw.name);
+  await applyPts(cId,rw.points,'redeem','Récompense : '+rw.name);
   const{data:r}=await sb.from('rewards').select('usage_count').eq('id',rwId).maybeSingle();
   await sb.from('rewards').update({usage_count:(r?.usage_count||0)+1}).eq('id',rwId);
   await renderAll();toast(`✓ "${rw.name}" appliquée à ${cl.name} !`,'ok');
