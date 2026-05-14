@@ -1,12 +1,10 @@
 /* ============================================================
-   LoyaltyOS — Service Worker
-   Stratégie : Cache-first pour les assets statiques,
-               Network-first pour Supabase (données temps réel).
+   LoyaltyOS — Service Worker v2
+   Ajout : gestion des push notifications
    ============================================================ */
 
-const CACHE_NAME = 'loyaltyos-v1';
+const CACHE_NAME = 'loyaltyos-v2';
 
-// Assets à mettre en cache immédiatement à l'installation
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -17,90 +15,112 @@ const STATIC_ASSETS = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/html5-qrcode.min.js',
-  // Fonts Google (si offline, fallback système)
-  'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap'
 ];
 
-// Domaines qui ne doivent JAMAIS être mis en cache (données live)
-const BYPASS_DOMAINS = [
-  'supabase.co',
-  'supabase.com'
-];
+const BYPASS_DOMAINS = ['supabase.co', 'supabase.com'];
 
-// ── Installation : précache les assets statiques ──────────────
+// ── Installation ──────────────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      // On ignore les erreurs individuelles (ex: font offline pendant install)
-      return Promise.allSettled(
-        STATIC_ASSETS.map(url =>
-          cache.add(url).catch(() => {
-            console.warn('[SW] Impossible de mettre en cache :', url);
-          })
-        )
-      );
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.allSettled(STATIC_ASSETS.map(url => cache.add(url).catch(() => {})))
+    ).then(() => self.skipWaiting())
   );
 });
 
-// ── Activation : nettoyer les anciens caches ──────────────────
+// ── Activation ───────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => {
-            console.log('[SW] Suppression ancien cache :', key);
-            return caches.delete(key);
-          })
-      )
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
 
-// ── Fetch : stratégie hybride ─────────────────────────────────
+// ── Fetch ────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-
-  // 1. Supabase & APIs externes → Network only (jamais cacher des données live)
   if (BYPASS_DOMAINS.some(d => url.hostname.includes(d))) {
     event.respondWith(fetch(event.request));
     return;
   }
-
-  // 2. Requêtes POST/PUT/DELETE → Network only
   if (event.request.method !== 'GET') {
     event.respondWith(fetch(event.request));
     return;
   }
-
-  // 3. Assets statiques → Cache first, fallback network
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
-
       return fetch(event.request).then(response => {
-        // Ne mettre en cache que les réponses valides (pas les erreurs)
-        if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
-        }
+        if (!response || response.status !== 200 || response.type === 'opaque') return response;
         const clone = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
       }).catch(() => {
-        // Offline fallback : servir index.html pour la navigation
-        if (event.request.destination === 'document') {
-          return caches.match('/index.html');
-        }
+        if (event.request.destination === 'document') return caches.match('/index.html');
       });
     })
   );
 });
 
-// ── Message : forcer la mise à jour depuis l'app ──────────────
-self.addEventListener('message', event => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+// ── Push notifications ────────────────────────────────────────
+// Reçoit les messages push de l'Edge Function send-push
+self.addEventListener('push', event => {
+  let data = { title: 'LoyaltyOS', body: 'Nouveau message', url: '/client.html' };
+  
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
+    }
+  } catch (e) {
+    if (event.data) data.body = event.data.text();
   }
+
+  const options = {
+    body:    data.body,
+    icon:    data.icon || '/icons/icon-192.png',
+    badge:   '/icons/icon-72.png',
+    data:    { url: data.url || '/client.html' },
+    // Vibreur sur Android
+    vibrate: [100, 50, 100],
+    // Grouper les notifs LoyaltyOS ensemble
+    tag:     'loyaltyos-notif',
+    renotify: true,
+    actions: [
+      { action: 'open',    title: 'Voir ma carte' },
+      { action: 'dismiss', title: 'Ignorer' },
+    ],
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// ── Clic sur la notification ──────────────────────────────────
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
+  const targetUrl = event.notification.data?.url || '/client.html';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // Si l'app est déjà ouverte → focus
+      for (const client of windowClients) {
+        if (client.url.includes(targetUrl) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Sinon → ouvrir
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    })
+  );
+});
+
+// ── Message depuis l'app ──────────────────────────────────────
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
