@@ -382,24 +382,38 @@ select.fi option{background:var(--bg);color:var(--txt)}
 /* ── Bouton flottant caisse ──────────────────────────────── */
 .pos-fab{
   position:fixed;
-  bottom:calc(68px + env(safe-area-inset-bottom));
-  right:16px;
-  width:54px;height:54px;border-radius:50%;
-  background:linear-gradient(135deg,#7B5EFF,#5B3FE4);
-  color:#fff;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(123,94,255,.5);
-  z-index:150;
-  transition:transform .15s,box-shadow .15s,background .2s;
-  -webkit-tap-highlight-color:transparent
+  right:clamp(12px,4vw,22px);
+  bottom:calc(92px + env(safe-area-inset-bottom));
+  width:clamp(52px,14vw,64px);
+  height:clamp(52px,14vw,64px);
+  border-radius:50%;
+  background:linear-gradient(135deg,#2962FF,#1A56E8);
+  color:#fff;
+  border:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 10px 30px rgba(41,98,255,.35);
+  z-index:250;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .15s ease,opacity .15s ease;
 }
-.pos-fab:active{transform:scale(.9)}
-.pos-fab.active{
-  background:linear-gradient(135deg,#2DD4A0,#16a34a);
-  box-shadow:0 4px 20px rgba(45,212,160,.5)
-}
-.pos-fab svg{width:22px;height:22px;stroke:#fff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
 
+.pos-fab:active{
+  transform:scale(.92);
+}
+
+.pos-fab svg{
+  width:26px;
+  height:26px;
+}
+
+@media (max-width:480px){
+  .pos-fab{
+    bottom:calc(84px + env(safe-area-inset-bottom));
+  }
+}
 /* ─── Scan animations ──────────────────────────────────────── */
 @keyframes scanLaser{0%,100%{opacity:.25;transform:translateY(-50%) scaleX(.5)}50%{opacity:.95;transform:translateY(-50%) scaleX(1)}}
 @keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,210,60,.4)}70%{box-shadow:0 0 0 8px rgba(255,210,60,0)}}
